@@ -5,7 +5,6 @@
 #define VOLT_CAL 127.0 //VALOR DE CALIBRAÇÃO (DEVE SER AJUSTADO EM PARALELO COM UM MULTÍMETRO)
 
  EnergyMonitor emon1;
- EnergyMonitor emon2;
 //portas entradas
 #define pinBotao 33
 //seletora
@@ -113,7 +112,6 @@ void setup() {
   pinMode(rele13,OUTPUT);
   //sensores
   emon1.voltage(sensor, VOLT_CAL, 1.7);
-  emon2.voltage(sensorCorrenteSaida, VOLT_CAL, 1.7);
   acendeTodosLeds();
   delay(1000);
   desligaTodosLeds();
@@ -219,12 +217,11 @@ if(tensaoMedida < 10 && x == 1){
     fonte200();
   }
 
-   emon1.calcVI(17,1000);
+   emon1.calcVI(17,100);
   float supplyVoltage   = emon1.Vrms;
-  emon2.calcVI(17,1000);
-  float supplyVoltage1   = emon2.Vrms;
+  Serial.println(supplyVoltage);
   if(y == 1){ 
-  if(x == 5 && supplyVoltage1 > 10 ){
+  if(x == 5 && supplyVoltage > 10){
   }else{
     if(x == 5){
     digitalWrite(ledDefeito, HIGH);
@@ -237,7 +234,7 @@ if(tensaoMedida < 10 && x == 1){
   }
     if(y == 2){
      
-  if(x == 5 && supplyVoltage1 > 10){
+  if(x == 5 && supplyVoltage > 10){
      
   }else{
     if(x == 5){
@@ -250,7 +247,7 @@ if(tensaoMedida < 10 && x == 1){
   }
   }
     if(y == 3){
-  if(x == 5 && supplyVoltage1 > 10 ){
+  if(x == 5 && supplyVoltage > 10 ){
      
   }else{
     if(x == 5){
@@ -263,7 +260,7 @@ if(tensaoMedida < 10 && x == 1){
     }
   }
     if(y == 4){
-  if(x == 5 && supplyVoltage1 > 10 ){
+  if(x == 5 && supplyVoltage > 10 ){
      
   }else{
     if(x == 5){
@@ -276,7 +273,7 @@ if(tensaoMedida < 10 && x == 1){
     }
   }
     if(y == 5){
-  if (x == 5 && supplyVoltage1 > 10 ){
+  if (x == 5 && supplyVoltage > 10 ){
      
   }else{
     if(x == 5){
@@ -289,7 +286,7 @@ if(tensaoMedida < 10 && x == 1){
     }
   }  
     if(y == 6){
-  if(x == 5 && supplyVoltage1 > 10 ){
+  if(x == 5 && supplyVoltage > 1 ){
      
   }else{
     if(x == 5){
