@@ -5,53 +5,52 @@
 
 EnergyMonitor emon1;
 //portas entradas
-#define pinBotao 33
+#define pinBotao 23
 //seletora
-#define fonte40S 31
+#define fonte40S 25
 #define fonte60S 27
 #define fonte70S 29
-#define fonte120S 41
-#define fonte150S 43
-#define fonte200S 45  
+#define fonte120S 31
+#define fonte150S 33
+#define fonte200S 35
 //leds
-#define ledBotao 22
-#define ledTeste 28
-#define ledSensor 23
-#define ledOk 30
-#define ledDefeito 32
-#define ledCurto 24
-#define ledTensaoFinal 26
+#define ledBotao 24
+#define ledTeste 30
+#define ledSensor 22
+#define ledOk 32
+#define ledDefeito 34
+#define ledCurto 26
+#define ledTensaoFinal 28
 //portas entradas sensores
 #define sensor A0
 #define sensorSaida A1
 #define sensorCorrenteSaida A2
 //disjuntores
-#define rele1 50
-#define rele2 51
-#define rele3 53
-#define rele4 47
-#define rele5 52
-#define rele6 34
-#define rele7 36
-#define rele8 38
-#define rele9 40
-#define rele10 42
-#define rele11 44
-#define rele12 46
-#define rele13 48
+#define rele1 36
+#define rele2 38
+#define rele3 40
+#define rele4 42
+#define rele5 44
+#define rele6 46
+#define rele7 48
+#define rele8 50
+#define rele9 52
+#define rele10 37
+#define rele11 39
+#define rele12 41
+#define rele13 43
 //reles
-#define releCurto 49
 //varaiveis de tempo
 unsigned long timeTeste;
 unsigned long tempo;
 unsigned long delayPiscaCurto;
 unsigned long delayPiscaCurtos;
-unsigned long delayCurto;
-unsigned long timeCurto;
 unsigned long delayRele;
 unsigned long timeRele;
 unsigned long delayLigaRele;
 unsigned long timeLigaRele;
+unsigned long delayTensaoMedida;
+unsigned long timeTensaoMedida;
 //funcoes
 void fonte40();
 void ligaRede();
@@ -64,9 +63,10 @@ void fonte200();
 void desliga_fontes();
 void controla_led_sensor();
 //variavel de cont
-int x = 0;
-int y = 0;
-int varificar = 0;
+byte x = 0;
+byte y = 0;
+byte estado = 1;
+byte varificar = 0;
 //variaveis sensores
 float tensaoEntrada = 0.0;
 float tensaoMedida = 0.0;
@@ -74,21 +74,8 @@ float tensaoMedida = 0.0;
 float valorR1 = 30000.0;
 float valorR2 = 7500.0;
 int leituraSensor = 0;
-int verificaLed = 0;
+byte verificaLed = 0;
 void setup() {
-  digitalWrite(rele1, HIGH);
-  digitalWrite(rele2, HIGH);
-  digitalWrite(rele3, HIGH);
-  digitalWrite(rele4, HIGH);
-  digitalWrite(rele5, HIGH);
-  digitalWrite(rele6, HIGH);
-  digitalWrite(rele7, HIGH);
-  digitalWrite(rele8, HIGH);
-  digitalWrite(rele9, HIGH);
-  digitalWrite(rele10, HIGH);
-  digitalWrite(rele11, HIGH);
-  digitalWrite(rele12, HIGH);
-  digitalWrite(rele13, HIGH);
   Serial.begin(9600);  //inicia a porta serial na 9600
   //define leds
   pinMode(ledBotao, OUTPUT);
@@ -112,8 +99,7 @@ void setup() {
   pinMode(sensorSaida, INPUT);
   pinMode(sensorCorrenteSaida, INPUT);
   //disjuntores
-  //rele rede
-  pinMode(releCurto, OUTPUT);
+
   //fontes 40
   pinMode(rele1, OUTPUT);
   pinMode(rele2, OUTPUT);
@@ -128,21 +114,43 @@ void setup() {
   pinMode(rele11, OUTPUT);
   pinMode(rele12, OUTPUT);
   pinMode(rele13, OUTPUT);
+  digitalWrite(rele1, LOW);
+  digitalWrite(rele2, LOW);
+  digitalWrite(rele3, LOW);
+  digitalWrite(rele4, LOW);
+  digitalWrite(rele5, LOW);
+  digitalWrite(rele6, LOW);
+  digitalWrite(rele7, LOW);
+  digitalWrite(rele8, LOW);
+  digitalWrite(rele9, LOW);
+  digitalWrite(rele10, LOW);
+  digitalWrite(rele11, LOW);
+  digitalWrite(rele12, LOW);
+  digitalWrite(rele13, LOW);
   //sensores
   emon1.voltage(sensor, VOLT_CAL, 1.7);
   acendeTodosLeds();
   delay(1000);
-  desligaTodosLeds();
+  desliga_todos_leds();
 }
 
 void loop() {
-  leituraSensor = analogRead(sensorSaida);
-  tensaoEntrada = (leituraSensor * 5.0) / 1024.0;
-  tensaoMedida = tensaoEntrada / (valorR2 / (valorR1 + valorR2));
+  controla_led();
+  static unsigned long delayPisca;
+  if ((millis() - delayPisca) < 3000) {
+    leituraSensor = analogRead(sensorSaida);
+    tensaoEntrada = (leituraSensor * 5.0) / 1024.0;
+    tensaoMedida = tensaoEntrada / (valorR2 / (valorR1 + valorR2));
+  }
+  if ((millis() - delayPisca) >= 6000) {
+    delayPisca = millis();
+  }
+
   if (!digitalRead(pinBotao) && x == 0) {
     delay(400);
-    if(tensaoMedida > 11){
-    x = 1;
+    if (tensaoMedida > 11) {
+      x = 1;
+      estado = 0;
     }
     desliga_fontes();
     digitalWrite(ledBotao, HIGH);
@@ -154,76 +162,13 @@ void loop() {
   }
 
   if (x == 0) {
-    delayPiscaCurtos = millis();
-    delayPiscaCurto = delayPiscaCurtos;
-    delayCurto = millis();
-    timeCurto = delayCurto;
     digitalWrite(ledTensaoFinal, LOW);
     digitalWrite(ledCurto, LOW);
 
   }
-  if(y < 4){
-    if(x == 1){
-      x = 3;
-    }
-  }
-if(y == 4){
-  if (tensaoMedida < 10 && x == 1) {
-    digitalWrite(ledCurto, LOW);
+  if (x == 1) {
     x = 3;
-  } else {
-    delayCurto = millis();
-    if ((delayCurto - timeCurto) > 5000 && x == 1) {
-      digitalWrite(ledCurto, LOW);
-      digitalWrite(ledDefeito, HIGH);
-      desliga_fontes();
-      x = 0;
-      timeCurto = delayCurto;
-    }
-    if (x == 1) {
-      controla_led_curto();
-      digitalWrite(releCurto, HIGH);
-    }
   }
-}
-if(y == 5){
-  if (tensaoMedida < 10 && x == 1) {
-    digitalWrite(ledCurto, LOW);
-    x = 3;
-  } else {
-    delayCurto = millis();
-    if ((delayCurto - timeCurto) > 5000 && x == 1) {
-      digitalWrite(ledCurto, LOW);
-      digitalWrite(ledDefeito, HIGH);
-      desliga_fontes();
-      x = 0;
-      timeCurto = delayCurto;
-    }
-    if (x == 1) {
-      controla_led_curto();
-      digitalWrite(releCurto, HIGH);
-    }
-  }
-}
-if(y == 6){
-  if (tensaoMedida < 10 && x == 1) {
-    digitalWrite(ledCurto, LOW);
-    x = 3;
-  } else {
-    delayCurto = millis();
-    if ((delayCurto - timeCurto) > 5000 && x == 1) {
-      digitalWrite(ledCurto, LOW);
-      digitalWrite(ledDefeito, HIGH);
-      desliga_fontes();
-      x = 0;
-      timeCurto = delayCurto;
-    }
-    if (x == 1) {
-      controla_led_curto();
-      digitalWrite(releCurto, HIGH);
-    }
-  }
-}
   if (!digitalRead(fonte40S) && x == 0) {
     y = 1;
   }
@@ -239,90 +184,35 @@ if(y == 6){
   if (!digitalRead(fonte120S) && x == 0) {
     y = 4;
   }
-
-
   if (!digitalRead(fonte150S) && x == 0) {
     y = 5;
   }
   if (!digitalRead(fonte200S) && x == 0) {
     y = 6;
   }
-  if (y == 1 && x == 5) {
-    fonte40();
+  if(estado == 1){
+    desliga_fontes_devagar();
   }
-  if (y == 2 && x == 5) {
-    fonte60();
+if(x == 5){
+  switch (y){
+    case 1:
+      fonte40();
+    case 2:
+      fonte60();
+    case 3:
+      fonte70();
+    case 4: 
+      fonte120();
+    case 5:
+      fonte150();
+    case 6:
+      fonte200();
   }
-  if (y == 3 && x == 5) {
-    fonte70();
-  }
-  if (y == 4 && x == 5) {
-    fonte120();
-  }
-  if (y == 5 && x == 5) {
-    fonte150();
-  }
-  if (y == 6 && x == 5) {
-    fonte200();
-  }
+}
 
   emon1.calcVI(17, 100);
   float supplyVoltage = emon1.Vrms;
-  if (y == 1) {
-    if (x == 5 && supplyVoltage < 0) {
-      digitalWrite(ledDefeito, HIGH);
-      desligaLed();
-      x = 0;
-      y = 0;
-      desliga_fontes();
-    }
-  }
-  if (y == 2) {
-    if (x == 5 && supplyVoltage < 0) {
-      digitalWrite(ledDefeito, HIGH);
-      desligaLed();
-      x = 0;
-      y = 0;
-      desliga_fontes();
-    }
-  }
-  if (y == 3) {
-    if (x == 5 && supplyVoltage < 0) {
-      digitalWrite(ledDefeito, HIGH);
-      desligaLed();
-      x = 0;
-      y = 0;
-      desliga_fontes();
-    }
-  }
-  if (y == 4) {
-    if (x == 5 && supplyVoltage < 120) {
-      digitalWrite(ledDefeito, HIGH);
-      desligaLed();
-      x = 0;
-      y = 0;
-      desliga_fontes();
-    }
-  }
-  if (y == 5) {
-    if (x == 5 && supplyVoltage < 120) {
-      digitalWrite(ledDefeito, HIGH);
-      desligaLed();
-      x = 0;
-      y = 0;
-      desliga_fontes();
-    }
-  }
-  if (y == 6) {
-    if (x == 5 && supplyVoltage < 120) {
-      digitalWrite(ledDefeito, HIGH);
-      desligaLed();
-      x = 0;
-      y = 0;
-      desliga_fontes();
-    }
-  }
-  if (supplyVoltage > 0) {
+  if (supplyVoltage > 110) {
     digitalWrite(ledSensor, HIGH);
   } else {
     controla_led_sensor();
@@ -331,9 +221,9 @@ if(y == 6){
       x = 0;
       digitalWrite(ledDefeito, HIGH);
       desliga_todos_leds();
+      desliga_fontes();
     }
   }
-  Serial.println(tensaoMedida);
   if (tensaoMedida > 12 && x == 3) {
     x = 4;
   } else {
@@ -344,15 +234,16 @@ if(y == 6){
     tempo = timeTeste;
     verificaLed = 0;
     delayLigaRele = millis();
-    timeLigaRele = delayLigaRele; 
+    timeLigaRele = delayLigaRele;
     delayRele = millis();
     timeRele = delayRele;
+    delayTensaoMedida = millis();
+    timeTensaoMedida = delayTensaoMedida;
     x = 5;
     digitalWrite(ledTensaoFinal, HIGH);
   } else {
     controla_led_tensao();
   }
-
   if (tensaoMedida < 10 && x == 5) {
     digitalWrite(ledDefeito, HIGH);
     desligaLed();
@@ -365,264 +256,185 @@ if(y == 6){
     timeTeste = millis();
     tempo = timeTeste;
     delayLigaRele = millis();
-    timeLigaRele = delayLigaRele; 
+    timeLigaRele = delayLigaRele;
     delayRele = millis();
     timeRele = delayRele;
   }
   if (x == 5) {
     timeTeste = millis();
-    if (timeTeste - tempo > 20000) {  //3:30 minutos
+    if (timeTeste - tempo > 23000) {  //3:30 minutos
       tempo = timeTeste;
       digitalWrite(ledDefeito, LOW);
       digitalWrite(ledTeste, LOW);
       digitalWrite(ledCurto, LOW);
-      desliga_fontes();
+      estado = 1;
       x = 0;
       if (x == 0) {
         digitalWrite(ledOk, HIGH);
       }
     }
+    byte sinal = digitalRead(rele1);
     timeTeste = millis();
-    if ((timeTeste - tempo) > 10000 && (timeTeste - tempo) < 20000) {
-          delayRele = millis();
-    timeRele = delayRele;
+    if ((timeTeste - tempo) > 13000 && (timeTeste - tempo) < 23000) {
+      delayRele = millis();
+      timeRele = delayRele;
       verificaLed =  1;
       digitalWrite(ledTeste, HIGH);
     }
   }
-  controla_led();
   controla_led_teste();
 }
 
 void fonte40() {
   delayLigaRele = millis();
   if (delayLigaRele - timeLigaRele > 1000) {
-    digitalWrite(rele10, LOW);
+    digitalWrite(rele9, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 2000) {
-    digitalWrite(rele11, LOW);
+    digitalWrite(rele10, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 3000) {
-    digitalWrite(rele12, LOW);
+    digitalWrite(rele2, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 4000) {
-    digitalWrite(rele13, LOW);
+    digitalWrite(rele3, HIGH);
   }
+  
 }
 void fonte60() {
   delayLigaRele = millis();
   if (delayLigaRele - timeLigaRele > 1000) {
-    digitalWrite(rele10, LOW);
+    digitalWrite(rele9, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 2000) {
-    digitalWrite(rele11, LOW);
+    digitalWrite(rele10, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 3000) {
-    digitalWrite(rele12, LOW);
+    digitalWrite(rele2, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 4000) {
-    digitalWrite(rele13, LOW);
+    digitalWrite(rele3, HIGH);
   }
 }
 void fonte70() {
   delayLigaRele = millis();
   if (delayLigaRele - timeLigaRele > 1000) {
-    digitalWrite(rele10, LOW);
+    digitalWrite(rele9, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 2000) {
-    digitalWrite(rele11, LOW);
+    digitalWrite(rele10, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 3000) {
-    digitalWrite(rele12, LOW);
+    digitalWrite(rele2, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 4000) {
-    digitalWrite(rele13, LOW);
+    digitalWrite(rele3, HIGH);
   }
 }
 void fonte120() {
   delayLigaRele = millis();
   if (delayLigaRele - timeLigaRele > 1000) {
-    digitalWrite(rele10, LOW);
+    digitalWrite(rele9, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 2000) {
-    digitalWrite(rele11, LOW);
+    digitalWrite(rele10, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 3000) {
-    digitalWrite(rele12, LOW);
+    digitalWrite(rele2, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 4000) {
-    digitalWrite(rele13, LOW);
+    digitalWrite(rele3, HIGH);
   }
 }
 void fonte150() {
   delayLigaRele = millis();
   if (delayLigaRele - timeLigaRele > 1000) {
-    digitalWrite(rele10, LOW);
+    digitalWrite(rele9, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 2000) {
-    digitalWrite(rele11, LOW);
+    digitalWrite(rele10, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 3000) {
-    digitalWrite(rele12, LOW);
+    digitalWrite(rele2, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 4000) {
-    digitalWrite(rele13, LOW);
+    digitalWrite(rele3, HIGH);
   }
 }
 void fonte200() {
   delayLigaRele = millis();
   if (delayLigaRele - timeLigaRele > 1000) {
-    digitalWrite(rele10, LOW);
+    digitalWrite(rele1, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 2000) {
-    digitalWrite(rele11, LOW);
+    digitalWrite(rele11, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 3000) {
-    digitalWrite(rele12, LOW);
+    digitalWrite(rele12, HIGH);
   }
   if (delayLigaRele - timeLigaRele > 4000) {
-    digitalWrite(rele13, LOW);
-  }
-}
-void desligaFonte200(){
-  varificar = 1;
-    delayRele = millis();
-  if (delayRele - timeRele > 1000) {
-    digitalWrite(rele10, HIGH);
-  }
-  if (delayRele - timeRele > 2000) {
-    digitalWrite(rele11, HIGH);
-  }
-  if (delayRele - timeRele > 3000) {
-    digitalWrite(rele12, HIGH);
-  }
-  if (delayRele - timeRele > 4000) {
     digitalWrite(rele13, HIGH);
   }
-  varificar = 0;
 }
-void desligaFonte150(){
-    varificar = 1;
-    delayRele = millis();
-  if (delayRele - timeRele > 1000) {
-    digitalWrite(rele10, HIGH);
-  }
-  if (delayRele - timeRele > 2000) {
-    digitalWrite(rele11, HIGH);
-  }
-  if (delayRele - timeRele > 3000) {
-    digitalWrite(rele12, HIGH);
-  }
-  if (delayRele - timeRele > 4000) {
-    digitalWrite(rele13, HIGH);
-  }
-  varificar = 0;
-}
-void desligaFonte120(){
-    varificar = 1;
-        if (varificar == 0) {
-    delayRele = millis();
-    timeRele = delayRele;
-  }
-    delayRele = millis();
-  if (delayRele - timeRele > 1000) {
-    digitalWrite(rele10, HIGH);
-  }
-  if (delayRele - timeRele > 2000) {
-    digitalWrite(rele11, HIGH);
-  }
-  if (delayRele - timeRele > 3000) {
-    digitalWrite(rele12, HIGH);
-  }
-  if (delayRele - timeRele > 4000) {
-    digitalWrite(rele13, HIGH);
-  }
-  varificar = 0;
-}
-void desligaFonte70(){
-    delayRele = millis();
-  if (delayRele - timeRele > 1000) {
-    digitalWrite(rele10, HIGH);
-  }
-  if (delayRele - timeRele > 2000) {
-    digitalWrite(rele11, HIGH);
-  }
-  if (delayRele - timeRele > 3000) {
-    digitalWrite(rele12, HIGH);
-  }
-  if (delayRele - timeRele > 4000) {
-    digitalWrite(rele13, HIGH);
-  }
-  varificar = 0;
-}
-void desligaFonte60(){
-    varificar = 1;
-    delayRele = millis();
-  if (delayRele - timeRele > 1000) {
-    digitalWrite(rele10, HIGH);
-  }
-  if (delayRele - timeRele > 2000) {
-    digitalWrite(rele11, HIGH);
-  }
-  if (delayRele - timeRele > 3000) {
-    digitalWrite(rele12, HIGH);
-  }
-  if (delayRele - timeRele > 4000) {
-    digitalWrite(rele13, HIGH);
-  }
-  varificar = 0;
-}
-void desligaFonte40(){
-    varificar = 1;
-    delayRele = millis();
-  if (delayRele - timeRele > 1000) {
-    digitalWrite(rele10, HIGH);
-  }
-  if (delayRele - timeRele > 2000) {
-    digitalWrite(rele11, HIGH);
-  }
-  if (delayRele - timeRele > 3000) {
-    digitalWrite(rele12, HIGH);
-  }
-  if (delayRele - timeRele > 4000) {
-    digitalWrite(rele13, HIGH);
-  }
-  varificar = 0;
+void desliga_fontes(){
+    digitalWrite(rele1, LOW);
+  digitalWrite(rele2, LOW);
+  digitalWrite(rele3, LOW);
+  digitalWrite(rele4, LOW);
+  digitalWrite(rele5, LOW);
+  digitalWrite(rele6, LOW);
+  digitalWrite(rele7, LOW);
+  digitalWrite(rele8, LOW);
+  digitalWrite(rele9, LOW);
+  digitalWrite(rele10, LOW);
+  digitalWrite(rele11, LOW);
+  digitalWrite(rele12, LOW);
+  digitalWrite(rele13, LOW);
 }
 void desliga_fontes_devagar() {
-  if(y == 1){
-    desligaFonte40();
+  delayRele = millis();
+  if((delayRele - timeRele) > 500){
+  digitalWrite(rele1, LOW);
   }
-    if(y == 2){
-    desligaFonte60();
+    if((delayRele - timeRele) > 1000){
+  digitalWrite(rele2, LOW);
   }
-    if(y == 3){
-    desligaFonte70();
+    if((delayRele - timeRele) > 1500){
+  digitalWrite(rele3, LOW);
   }
-    if(y == 4){
-    desligaFonte120();
+    if((delayRele - timeRele) > 2000){
+  digitalWrite(rele4, LOW);
   }
-    if(y == 5){
-    desligaFonte150();
+    if((delayRele - timeRele) > 2500){
+  digitalWrite(rele5, LOW);
   }
-    if(y == 6){
-    desligaFonte200();
-     }
-} 
-void desliga_fontes() {
-  digitalWrite(rele1, HIGH);
-  digitalWrite(rele2, HIGH);
-  digitalWrite(rele3, HIGH);
-  digitalWrite(rele4, HIGH);
-  digitalWrite(rele5, HIGH);
-  digitalWrite(rele6, HIGH);
-  digitalWrite(rele7, HIGH);
-  digitalWrite(rele8, HIGH);
-  digitalWrite(rele9, HIGH);
-  digitalWrite(rele10, HIGH);
-  digitalWrite(rele11, HIGH);
-  digitalWrite(rele12, HIGH);
-  digitalWrite(rele13, HIGH);
+    if((delayRele - timeRele) > 3000){
+  digitalWrite(rele6, LOW);
+  }
+    if((delayRele - timeRele) > 3500){
+  digitalWrite(rele7, LOW);
+  }
+    if((delayRele - timeRele) > 4000){
+  digitalWrite(rele8, LOW);
+  }
+    if((delayRele - timeRele) > 4500){
+  digitalWrite(rele9, LOW);
+  }
+    if((delayRele - timeRele) > 5000){
+  digitalWrite(rele10, LOW);
+  }
+    if((delayRele - timeRele) > 5500){
+  digitalWrite(rele11, LOW);
+  }
+    if((delayRele - timeRele) > 6000){
+  digitalWrite(rele12, LOW);
+  }
+   if((delayRele - timeRele) > 6500){
+  digitalWrite(rele13, LOW);
+  }
+    if((delayRele - timeRele) > 7000){
+    timeRele = delayRele;
+  }
 }
 void controla_led() {
 
@@ -633,7 +445,6 @@ void controla_led() {
     } else {
       digitalWrite(ledBotao, LOW);
     }
-
     if ((millis() - delayPisca) >= 600) {
       delayPisca = millis();
     }
